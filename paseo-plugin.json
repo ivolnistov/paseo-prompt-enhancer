@@ -1,0 +1,8 @@
+{
+  "id": "prompt-enhancer",
+  "name": "Prompt Enhancer",
+  "description": "Session-aware prompt improvement for the Paseo composer.",
+  "requirements": {
+    "paseo": ">=0.15.4"
+  }
+}
