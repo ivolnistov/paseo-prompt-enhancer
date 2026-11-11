@@ -1,0 +1,24 @@
+# Paseo integration feasibility
+
+Status: **gate not passed**. Read-only investigation, 2026-11-11. No daemon was changed and no live model or end-to-end test was run.
+
+## Evidence and version scope
+
+- This repository pins `@getpaseo/plugin` 0.15.4 in `package.json` and its installed declarations. On 2026-11-11 `npm view @getpaseo/plugin version` returned `0.15.4`. This establishes the observed npm registry result, not the version of every Paseo deployment.
+- `node_modules/@getpaseo/plugin/dist/client/contracts.d.ts` exposes `addComposerPill` and `addSettingsScreen`, but contains no `addComposerItem` or composer text access. The installed client declarations contain no `useComposer`, `setPrompt`, or `client.composers` symbols. The current [plugin reference](https://paseo.sh/docs/plugins/reference.md#composer-items) documents these newer interfaces and says phone controls can be placed in overflow. No released version supporting them has been established. The manifest's `>=0.15.4` is therefore not a verified compatibility claim for this design.
+- Host settings exist in the installed `dist/settings.d.ts` as `defineSettings` with `scope: "host"`; the [settings reference](https://paseo.sh/docs/plugins/reference.md#persisted-values) describes host sharing and revision conflicts. Actual host/client behavior has not been tested.
+- Installed `@getpaseo/client/dist/index.d.ts` exposes provider `listAvailable`, `snapshot` and `listModels`, timeline `refetch`, and agent creation, `waitForFinish` and `archive`. [SDK documentation](https://paseo.sh/docs/sdk/agents.md#run-a-helper-as-a-background-agent) describes background agents, their retained history and explicit archiving. The installed declaration describes `background` as visibility intent for a new workspace and says existing targets reject it; the current web documentation describes background agents in existing workspaces. Resolve this version discrepancy against the actual target before relying on either behavior.
+- In installed SDK declarations `PaseoAgentConfig.toolPolicy` is the protocol's policy. `node_modules/@getpaseo/plugin/dist/server/provider.d.ts` defines its provider form as a list of exact MCP **preapprovals**, not a universal deny-all-tools switch. Provider-native `options` are provider-specific. A system prompt or an empty preapproval list does not demonstrate that built-in tools, filesystem access, inherited instructions or other MCP servers are disabled.
+- Secondary, older source inspection: `/Users/ivolnistov/work/paseo-fork` commit `f946551b86b25276713e0a4cb60f71ff04791e0e`, package version 0.13.2, is behind its remote and is not evidence of current 0.15.4 behavior. Its `packages/protocol/src/provider-config.ts` contains provider-level `disallowedTools`; its Codex options contain sandbox settings and Claude options contain allowed/disallowed tool lists. These different mechanisms do not establish a common per-agent text-only contract for all configured providers.
+
+## Lifecycle and history limits
+
+The [SDK guide](https://paseo.sh/docs/sdk/agents.md#run-an-initial-prompt) states that a wait can finish with a permission request, error or timeout, and timeout does not itself cancel the agent. `archive()` is documented as soft deletion and runtime closure; the SDK guide recommends cleanup in `finally`. The installed high-level agent handle does not expose an explicit `interrupt` method. Reliable archive behavior during an active turn, transport loss, restart and failed cleanup has not been proven. Closing a client connection alone is not cleanup.
+
+The SDK exposes timeline pagination, but this investigation did not establish complete tool input/output representation, correct ordering/truncation across pages, or handling of unavailable history on every provider. Existing-agent, draft and new-workspace composer behavior, Undo lifetime, mobile placement and remote round trips have not been exercised.
+
+## Gate decision and next action
+
+The approved plan requires an enforced restriction of helper tools and controlled lifecycle before product implementation. Neither a universal text-only restriction nor recovery across all required failure paths has been established. In addition, the pinned SDK lacks the documented composer interfaces. The gate remains **not passed**; this is not a claim that the capability is impossible in another version or provider.
+
+The owner requested end-to-end tests on a separate isolated daemon. A useful future test setup must have its own daemon home, configuration, ports, temporary workspace and synthetic data, and must record exact host/app/plugin versions. It must not change the existing daemon. A live provider test alone cannot prove that all providers and inherited configurations deny tools. Resolve the API/version and execution design first, then perform authorized tests on the isolated daemon.
