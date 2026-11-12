@@ -4,25 +4,23 @@ import { useSettings, useSubscription, type PluginButtonContentProps, type Plugi
 import { TextInput } from "@getpaseo/plugin/client/ui";
 import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
-import { builtInScenarios, preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
-import { applyImprovement } from "./draft";
+import { builtInScenarios, goalInstruction, preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
+import { applyImprovement, goalCommand } from "./draft";
 import { createVisibilityState } from "./visibility";
+import { applyPresentation } from "./presentation";
 
-interface AgentActions { quick: PluginButtonRegistration; advanced: PluginButtonRegistration; undo: PluginButtonRegistration }
+interface AgentActions { quick: PluginButtonRegistration; advanced: PluginButtonRegistration; goal: PluginButtonRegistration; undo: PluginButtonRegistration }
 
 export function registerActions(client: PluginClientContext): { cleanup(): void; setPresentation(value: Presentation): void } {
   const registrations = new Map<string, AgentActions>();
   const busy = new Set<string>();
   const previous = new Map<string, string>();
   const lifetime = new AbortController();
-  let presentation: Presentation = { showAdvanced: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" };
+  let presentation: Presentation = { showQuick: false, showAdvanced: false, showGoal: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance", goalLabel: "Goal Improve" };
 
   const visibility = createVisibilityState<Presentation>((value) => {
     presentation = value;
-    for (const registration of registrations.values()) {
-      registration.quick.update({ title: value.quickLabel, label: value.quickLabel });
-      registration.advanced.update({ title: value.advancedLabel, label: value.advancedLabel, visible: value.showAdvanced });
-    }
+    for (const registration of registrations.values()) applyPresentation(registration, value);
   });
   const setPresentation = visibility.update;
 
@@ -37,12 +35,13 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     return settingsSchema.parse(result.values);
   }).catch((error: unknown) => { if (!lifetime.signal.aborted) console.error("Prompt Enhancer settings unavailable", error); });
 
-  async function run(workspaceId: string, agentId: string, instruction: string, historyLimit: number, includeTools: boolean): Promise<void> {
+  async function run(workspaceId: string, agentId: string, instruction: string, historyLimit: number, includeTools: boolean, format: (text: string) => string = (text) => text): Promise<void> {
     if (busy.has(agentId)) throw new Error("An enhancement is already running.");
     const initial = client.composers({ agentId })[0];
     if (!initial?.prompt.trim()) throw new Error("Write a prompt first.");
     busy.add(agentId);
     registrations.get(agentId)?.quick.update({ disabled: true });
+    registrations.get(agentId)?.goal.update({ disabled: true });
     try {
       const { operationId } = await client.rpc(startEnhancement, { workspaceId, agentId, draft: initial.prompt, instruction, historyLimit, includeTools });
       const deadline = Date.now() + 180_000;
@@ -56,11 +55,12 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
       if (text === null) throw new Error("The enhancement did not complete in time.");
       const current = client.composers({ agentId })[0];
       if (!current || lifetime.signal.aborted) throw new Error("This composer is no longer available.");
-      previous.set(agentId, applyImprovement(current, text));
+      previous.set(agentId, applyImprovement(current, format(text)));
       registrations.get(agentId)?.undo.update({ visible: true });
     } finally {
       busy.delete(agentId);
       registrations.get(agentId)?.quick.update({ disabled: false });
+      registrations.get(agentId)?.goal.update({ disabled: false });
     }
   }
 
@@ -71,6 +71,13 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     const scenario = [...builtInScenarios, ...settings.customScenarios].find((item) => item.id === settings.defaultScenario);
     if (!scenario) throw new Error("Choose a default scenario in settings.");
     await run(workspaceId, agentId, scenario.instruction, settings.historyLimit, settings.includeTools);
+  }
+
+  async function goal(workspaceId: string, agentId: string): Promise<void> {
+    const stored = await client.rpc(settingsRpc(preferences.id).read, {});
+    if (stored.status !== "ready") throw new Error(stored.error);
+    const settings = settingsSchema.parse(stored.values);
+    await run(workspaceId, agentId, goalInstruction, settings.goalHistoryLimit, settings.goalIncludeTools, goalCommand);
   }
 
   function Advanced(props: PluginButtonContentProps) {
@@ -107,16 +114,17 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
 
   function remove(agentId: string): void {
     const registration = registrations.get(agentId);
-    registration?.quick.remove(); registration?.advanced.remove(); registration?.undo.remove();
+    registration?.quick.remove(); registration?.advanced.remove(); registration?.goal.remove(); registration?.undo.remove();
     registrations.delete(agentId); previous.delete(agentId);
   }
   function register(agent: { id: string; workspaceId?: string | null }): void {
     if (!agent.workspaceId || lifetime.signal.aborted || registrations.has(agent.id)) return;
     const { id: agentId, workspaceId } = agent;
-    const quickButton = client.addComposerPill({ id: "quick", agentId, workspaceId, button: { title: presentation.quickLabel, label: presentation.quickLabel, icon: "Sparkles", behavior: { kind: "action", onPress: () => quick(workspaceId, agentId) } } });
+    const quickButton = client.addComposerPill({ id: "quick", agentId, workspaceId, button: { title: presentation.quickLabel, label: presentation.quickLabel, icon: "Sparkles", visible: presentation.showQuick, behavior: { kind: "action", onPress: () => quick(workspaceId, agentId) } } });
     const advanced = client.addComposerPill({ id: "advanced", agentId, workspaceId, button: { title: presentation.advancedLabel, label: presentation.advancedLabel, icon: "SlidersHorizontal", visible: presentation.showAdvanced, behavior: { kind: "popover", Content: Advanced } } });
+    const goalButton = client.addComposerPill({ id: "goal", agentId, workspaceId, button: { title: presentation.goalLabel, label: presentation.goalLabel, icon: "Target", visible: presentation.showGoal, behavior: { kind: "action", onPress: () => goal(workspaceId, agentId) } } });
     const undo = client.addComposerPill({ id: "undo", agentId, workspaceId, button: { title: "Undo prompt improvement", label: "Undo", icon: "Undo2", visible: false, behavior: { kind: "action", onPress() { const current = client.composers({ agentId })[0]; const text = previous.get(agentId); if (current && text !== undefined) { current.setPrompt(text); previous.delete(agentId); registrations.get(agentId)?.undo.update({ visible: false }); } } } } });
-    registrations.set(agentId, { quick: quickButton, advanced, undo });
+    registrations.set(agentId, { quick: quickButton, advanced, goal: goalButton, undo });
   }
   void client.paseo.agents.list({ subscribe: {}, signal: lifetime.signal }).then(({ subscription }) => {
     subscription.subscribe({

@@ -36,11 +36,18 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
       <SettingsSelect label="Default scenario" value={draft.defaultScenario} options={scenarios.map((scenario) => ({ label: scenario.name, value: scenario.id }))} onValueChange={(defaultScenario) => update({ defaultScenario })} />
       <SettingsInput label="History limit in characters" initialValue={String(draft.historyLimit)} onChangeText={(value) => update({ historyLimit: value.trim() === "" ? 0 : Number(value) })} />
       <SettingsSwitch label="Include tool calls and results" value={draft.includeTools} onValueChange={(includeTools) => update({ includeTools })} />
-      <SettingsSwitch label="Show advanced action" value={draft.showAdvanced} onValueChange={(showAdvanced) => update({ showAdvanced })} />
     </SettingsCard></SettingsSection>
     <SettingsSection title="Composer buttons"><SettingsCard>
       <SettingsInput label="Quick button name" initialValue={draft.quickLabel} onChangeText={(quickLabel) => update({ quickLabel })} />
+      <SettingsSwitch label="Show quick button" value={draft.showQuick} onValueChange={(showQuick) => update({ showQuick })} />
       <SettingsInput label="Advanced button name" initialValue={draft.advancedLabel} onChangeText={(advancedLabel) => update({ advancedLabel })} />
+      <SettingsSwitch label="Show advanced button" value={draft.showAdvanced} onValueChange={(showAdvanced) => update({ showAdvanced })} />
+      <SettingsInput label="Goal button name" initialValue={draft.goalLabel} onChangeText={(goalLabel) => update({ goalLabel })} />
+      <SettingsSwitch label="Show goal button" value={draft.showGoal} onValueChange={(showGoal) => update({ showGoal })} />
+    </SettingsCard></SettingsSection>
+    <SettingsSection title="Goal context"><SettingsCard>
+      <SettingsInput label="Goal history limit in characters" initialValue={String(draft.goalHistoryLimit)} onChangeText={(value) => update({ goalHistoryLimit: value.trim() === "" ? 0 : Number(value) })} />
+      <SettingsSwitch label="Include tool calls and results in goal" value={draft.goalIncludeTools} onValueChange={(goalIncludeTools) => update({ goalIncludeTools })} />
     </SettingsCard></SettingsSection>
     <SettingsSection title="Custom scenarios"><SettingsCard>
       {draft.customScenarios.map((scenario, index) => <View key={scenario.id} style={{ gap: 8, padding: 12 }}>

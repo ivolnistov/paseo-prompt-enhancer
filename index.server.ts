@@ -13,8 +13,8 @@ export default function contribute(server: PluginServerContext): () => void {
   let active = true;
   server.handle(visibilityChanges, (_input, { push, signal }) => {
     let receivedChange = false;
-    const send = ({ showAdvanced, quickLabel, advancedLabel }: Presentation) => {
-      void push({ showAdvanced, quickLabel, advancedLabel }).catch((error: unknown) => {
+    const send = ({ showAdvanced, showQuick, showGoal, quickLabel, advancedLabel, goalLabel }: Presentation) => {
+      void push({ showAdvanced, showQuick, showGoal, quickLabel, advancedLabel, goalLabel }).catch((error: unknown) => {
         if (!signal.aborted) console.error("Prompt Enhancer visibility update failed", error);
       });
     };

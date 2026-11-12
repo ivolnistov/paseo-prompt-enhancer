@@ -45,11 +45,11 @@ test("visibility subscribers receive the saved value and changes, then unsubscri
   const events: unknown[] = [];
   handler({}, { signal: controller.signal, push: async (event: unknown) => { events.push(event); } });
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.deepEqual(events, [{ showAdvanced: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" }]);
+  assert.deepEqual(events, [{ showAdvanced: false, showQuick: true, showGoal: true, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance", goalLabel: "Goal Improve" }]);
   assert.ok(listener);
   listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true, quickLabel: "Rewrite", advancedLabel: "Options" }) });
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.deepEqual(events, [{ showAdvanced: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" }, { showAdvanced: true, quickLabel: "Rewrite", advancedLabel: "Options" }]);
+  assert.deepEqual(events, [{ showAdvanced: false, showQuick: true, showGoal: true, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance", goalLabel: "Goal Improve" }, { showAdvanced: true, showQuick: true, showGoal: true, quickLabel: "Rewrite", advancedLabel: "Options", goalLabel: "Goal Improve" }]);
   controller.abort();
   assert.equal(released, true);
   cleanup();
@@ -75,7 +75,7 @@ test("an older initial settings read does not overwrite a newer notification", a
   listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true }) });
   finishRead({ status: "ready", values: settingsSchema.parse({ showAdvanced: false }) });
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.deepEqual(events, [{ showAdvanced: true, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" }]);
+  assert.deepEqual(events, [{ showAdvanced: true, showQuick: true, showGoal: true, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance", goalLabel: "Goal Improve" }]);
   controller.abort();
   cleanup();
 });

@@ -9,3 +9,9 @@ export function applyImprovement(target: DraftTarget, result: string): string {
   target.setPrompt(result);
   return previous;
 }
+
+export function goalCommand(result: string): string {
+  const objective = result.trim().replace(/^\/goal(?:\s+|$)/i, "").trim();
+  if (!objective || /^(pause|resume|clear)$/i.test(objective)) throw new Error("The provider did not return a goal objective.");
+  return `/goal ${objective}`;
+}
