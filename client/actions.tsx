@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { useSettings, type PluginButtonContentProps, type PluginButtonRegistration, type PluginClientContext } from "@getpaseo/plugin/client";
+import { useSettings, useSubscription, type PluginButtonContentProps, type PluginButtonRegistration, type PluginClientContext } from "@getpaseo/plugin/client";
 import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
-import { builtInScenarios, preferences, settingsSchema } from "../shared/settings";
+import { builtInScenarios, preferences, settingsSchema, visibilityChanges } from "../shared/settings";
 import { applyImprovement } from "./draft";
 
 interface AgentActions { quick: PluginButtonRegistration; advanced: PluginButtonRegistration; undo: PluginButtonRegistration }
 
-export function registerActions(client: PluginClientContext): () => void {
+export function registerActions(client: PluginClientContext): { cleanup(): void; setAdvancedVisibility(visible: boolean): void } {
   const registrations = new Map<string, AgentActions>();
   const busy = new Set<string>();
   const previous = new Map<string, string>();
@@ -21,10 +21,7 @@ export function registerActions(client: PluginClientContext): () => void {
   }
 
   function SettingsBridge() {
-    const settings = useSettings(preferences);
-    useEffect(() => {
-      if (settings.status === "ready") setAdvancedVisibility(settings.values.showAdvanced);
-    }, [settings.status, settings.status === "ready" ? settings.values.showAdvanced : null]);
+    useSubscription(visibilityChanges, {}, ({ showAdvanced: visible }) => setAdvancedVisibility(visible));
     return null;
   }
   const removeSettingsBridge = client.addComposerItem({ id: "settings-bridge", Component: SettingsBridge });
@@ -119,5 +116,8 @@ export function registerActions(client: PluginClientContext): () => void {
       update: (message) => { if (message.type !== "agent_update") return; const update = message.payload; if (update.kind === "upsert") register(update.agent); else remove(update.agentId); },
     });
   }).catch((error: unknown) => { if (!lifetime.signal.aborted) console.error("Prompt Enhancer agent observation failed", error); });
-  return () => { lifetime.abort(); removeSettingsBridge(); for (const id of registrations.keys()) remove(id); };
+  return {
+    setAdvancedVisibility,
+    cleanup() { lifetime.abort(); removeSettingsBridge(); for (const id of registrations.keys()) remove(id); },
+  };
 }

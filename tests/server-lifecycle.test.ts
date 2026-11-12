@@ -25,3 +25,57 @@ test("a result arriving after teardown does not recreate operation state", async
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.throws(() => status({ operationId: result.operationId }, {}), /no longer available/);
 });
+
+test("visibility subscribers receive the saved value and changes, then unsubscribe", async () => {
+  let listener: ((state: unknown) => void) | undefined;
+  let released = false;
+  const handlers = new Map<string, (input: unknown, context: unknown) => unknown>();
+  const server = {
+    registerSettings: () => ({
+      read: async () => ({ status: "ready", values: settingsSchema.parse({ showAdvanced: false }) }),
+      subscribe: (callback: (state: unknown) => void) => { listener = callback; return () => { released = true; }; },
+    }),
+    handle: (contract: { name: string }, handler: (input: unknown, context: unknown) => unknown) => { handlers.set(contract.name, handler); },
+  };
+  // The fake implements the server registration methods used by the contribution.
+  const cleanup = contribute(server as unknown as PluginServerContext);
+  const handler = handlers.get("preferences.visibility");
+  assert.ok(handler);
+  const controller = new AbortController();
+  const events: unknown[] = [];
+  handler({}, { signal: controller.signal, push: async (event: unknown) => { events.push(event); } });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(events, [{ showAdvanced: false }]);
+  assert.ok(listener);
+  listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true }) });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(events, [{ showAdvanced: false }, { showAdvanced: true }]);
+  controller.abort();
+  assert.equal(released, true);
+  cleanup();
+});
+
+test("an older initial settings read does not overwrite a newer notification", async () => {
+  let finishRead: ((state: unknown) => void) | undefined;
+  let listener: ((state: unknown) => void) | undefined;
+  const pending = new Promise<unknown>((resolve) => { finishRead = resolve; });
+  const handlers = new Map<string, (input: unknown, context: unknown) => unknown>();
+  const server = {
+    registerSettings: () => ({ read: () => pending, subscribe: (callback: (state: unknown) => void) => { listener = callback; return () => {}; } }),
+    handle: (contract: { name: string }, handler: (input: unknown, context: unknown) => unknown) => { handlers.set(contract.name, handler); },
+  };
+  // The fake implements the server registration methods used by the contribution.
+  const cleanup = contribute(server as unknown as PluginServerContext);
+  const handler = handlers.get("preferences.visibility");
+  assert.ok(handler);
+  const controller = new AbortController();
+  const events: unknown[] = [];
+  handler({}, { signal: controller.signal, push: async (event: unknown) => { events.push(event); } });
+  assert.ok(listener && finishRead);
+  listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true }) });
+  finishRead({ status: "ready", values: settingsSchema.parse({ showAdvanced: false }) });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(events, [{ showAdvanced: true }]);
+  controller.abort();
+  cleanup();
+});

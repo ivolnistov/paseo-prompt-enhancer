@@ -4,7 +4,7 @@ import { usePaseo, useSettings, type PluginSurfaceProps } from "@getpaseo/plugin
 import { SettingsAction, SettingsCard, SettingsInput, SettingsSection, SettingsSelect, SettingsSwitch } from "@getpaseo/plugin/client/ui";
 import { builtInScenarios, preferences, type Preferences } from "../shared/settings";
 
-export function Settings({ theme }: PluginSurfaceProps) {
+export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(showAdvanced: boolean): void }) {
   const settings = useSettings(preferences);
   const paseo = usePaseo();
   const [draft, setDraft] = useState<Preferences | null>(null);
@@ -26,7 +26,7 @@ export function Settings({ theme }: PluginSurfaceProps) {
   const scenarios = [...builtInScenarios, ...draft.customScenarios];
   const models = catalog.find((entry) => entry.provider === draft.provider)?.models ?? [];
   const save = async () => {
-    if (await settings.save(draft, revision)) { setDraft(null); setError(""); }
+    if (await settings.save(draft, revision)) { onSaved(draft.showAdvanced); setDraft(null); setError(""); }
     else setError("Could not save settings. Reload and review your changes if another client changed them.");
   };
   return <View style={{ gap: 16 }}>

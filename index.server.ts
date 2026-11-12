@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { startEnhancement, enhancementStatus } from "./shared/enhance";
-import { preferences } from "./shared/settings";
+import { preferences, visibilityChanges } from "./shared/settings";
 import { runEnhancement } from "./server/enhance";
 
 export default function contribute(server: PluginServerContext): () => void {
@@ -11,6 +11,22 @@ export default function contribute(server: PluginServerContext): () => void {
   const operations = new Map<string, Operation>();
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let active = true;
+  server.handle(visibilityChanges, (_input, { push, signal }) => {
+    let receivedChange = false;
+    const send = (visible: boolean) => {
+      void push({ showAdvanced: visible }).catch((error: unknown) => {
+        if (!signal.aborted) console.error("Prompt Enhancer visibility update failed", error);
+      });
+    };
+    const unsubscribe = settings.subscribe((state) => {
+      if (state.status === "ready") { receivedChange = true; send(state.values.showAdvanced); }
+    });
+    if (signal.aborted) { unsubscribe(); return; }
+    signal.addEventListener("abort", unsubscribe, { once: true });
+    void settings.read().then((state) => { if (!signal.aborted && !receivedChange && state.status === "ready") send(state.values.showAdvanced); }).catch((error: unknown) => {
+      if (!signal.aborted) console.error("Prompt Enhancer settings read failed", error);
+    });
+  });
   server.handle(startEnhancement, async (input, { paseo }) => {
     const current = await settings.read();
     if (current.status !== "ready") throw new Error(`Prompt Enhancer settings are invalid: ${current.error}`);

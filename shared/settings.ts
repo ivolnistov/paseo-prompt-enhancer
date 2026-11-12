@@ -1,4 +1,4 @@
-import { defineSettings } from "@getpaseo/plugin";
+import { defineSettings, defineSubscription } from "@getpaseo/plugin";
 import { z } from "zod";
 
 export const builtInScenarios = [
@@ -36,6 +36,12 @@ export const preferences = defineSettings({
   scope: "host",
   version: 1,
   schema: settingsSchema,
+});
+
+export const visibilityChanges = defineSubscription({
+  name: "preferences.visibility",
+  input: z.object({}),
+  event: z.object({ showAdvanced: z.boolean() }),
 });
 
 export type Preferences = z.output<typeof settingsSchema>;
