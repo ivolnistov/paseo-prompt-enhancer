@@ -5,7 +5,7 @@
 
 **Goal:** Improve a Paseo composer draft on demand using a configured host provider and an optional window of conversation history.
 
-**Architecture:** A React Native client contributes composer controls and a settings screen. A host-side plugin service uses Paseo settings and SDK operations to collect history and run a restricted temporary helper, subject to the feasibility gate below. Shared schemas define settings and RPC boundaries.
+**Architecture:** A React Native client contributes composer controls and a settings screen. A host-side plugin service uses Paseo settings and SDK operations to collect history and run a temporary background helper with the selected provider’s normal permissions. Shared schemas define settings and RPC boundaries.
 
 **Tech Stack:** TypeScript, React Native, `@getpaseo/plugin`, Zod, Paseo SDK, Node test runner with `tsx` for TypeScript tests.
 
@@ -18,7 +18,7 @@
 - The result replaces the current draft without sending; Undo restores the text immediately before replacement.
 - Support desktop, compact/mobile and remote hosts, subject to verified host and app API versions.
 - Run end-to-end tests on a separate, isolated daemon, as requested by the owner.
-- No implementation of the product flow until Task 1 proves tool restrictions and helper lifecycle. Stop and report a failed or unknown gate for an owner decision.
+- Use the official Paseo 0.16 APIs and do not modify Paseo itself. Do not claim background agents are tool-free; do not automatically grant permissions.
 - History and drafts may remain in helper or provider history; archiving is not deletion. Do not log their contents.
 - User approval of this plan does not authorize publication, deployment, or installing/reloading a plugin on a daemon.
 
@@ -40,14 +40,14 @@ Names are the intended ownership boundaries, not evidence that Paseo exposes a p
 
 **Files:** Create `AGENTS.md`, `docs/feasibility/paseo-api.md`. Read the installed SDK declarations, current Paseo plugin/SDK documentation, and relevant local Paseo source if available.
 
-**Interfaces:** Consumes the approved spec. Produces an evidence-backed host/app minimum version and a gate decision covering provider/model catalog, composer read/write and placement, history pagination and item types, settings, helper creation, restrictions and termination.
+**Interfaces:** Consumes the approved spec. Produces an evidence-backed host/app minimum version and a gate decision covering provider/model catalog, composer read/write and placement, history pagination and item types, settings, helper creation, permissions and termination.
 
 - [ ] Write `AGENTS.md` with the shared policy reference `/Users/ivolnistov/.skills/policies/TEAM.md`, TypeScript client/server separation, `npm run typecheck`, the future `npm test`, and the approved spec and this plan as project references. Do not duplicate global policy or prescribe agent identities.
-- [ ] Document exact source/version and symbols for each interface. Inspect provider-specific modes and launch configuration for a demonstrable restriction of built-in tools, MCP tools, inherited instructions and file access; distinguish prompt instructions from enforced restrictions.
+- [ ] Document exact source/version and symbols for each interface. Describe the provider's normal modes and permissions and distinguish prompt instructions from enforced restrictions.
 - [ ] Trace helper creation, successful completion, permission wait, timeout, cancellation, disconnection, daemon restart and cleanup. Verify what is archived and retained. Identify a safe supported recovery mechanism; do not assume timeout cancels work.
 - [ ] Verify history retrieval supplies enough chronological text and tool data, including pagination. Verify composer behavior for existing agents, drafts, new workspaces, mobile overflow and Undo. Record unsupported cases and exact version requirements.
 - [ ] Use read-only inspection first. A live provider probe has cost and creates agent history: prepare a concrete probe and obtain any required authorization before running it. Record evidence and outcome, not draft or session content.
-- [ ] Gate: proceed only if restrictions and lifecycle control are established for the supported providers and contexts. Otherwise record the missing guarantee, stop and ask the owner whether to change Paseo or revise scope. Do not implement Tasks 2–5 on an assumed pass.
+- [ ] Record supported APIs, provider permission behavior and lifecycle limitations. Do not require a universal deny-all-tools guarantee or changes to Paseo.
 - [ ] Commit the project instructions and evidence once reviewed: `git add AGENTS.md docs/feasibility/paseo-api.md && git commit -m 'Document Paseo feasibility and project guidance'`.
 
 ### Task 2: Settings and deterministic history selection
@@ -66,18 +66,18 @@ Names are the intended ownership boundaries, not evidence that Paseo exposes a p
 
 **Files:** Create `shared/enhance.ts`, `server/enhance.ts`, `index.server.ts`, `tests/enhance.test.ts`. Modify `server/history.ts` if the verified history adapter requires it.
 
-**Interfaces:** A validated `enhance` RPC accepts the verified composer/agent context, draft, instruction, history character limit and tool inclusion; it returns `{ text: string }` only for a nonempty successful response. The service depends on an injected helper and history boundary so tests can observe create, wait, stop and archive without paid calls. Concrete SDK method signatures come from Task 1's evidence.
+**Interfaces:** The validated `enhance.start` RPC accepts the composer/agent context, draft, instruction, history character limit and tool inclusion and returns an operation ID. `enhance.status` returns running, a nonempty result, or an error. The host retains results briefly, and archives the helper on completion or failure. Separate short calls avoid the 60-second RPC deadline while the agent works. Test helper and history boundaries with fakes.
 
 - [ ] Write fake-boundary tests proving zero context causes no history fetch, a positive limit selects eligible history, the configured provider/model and instruction reach the helper, and success returns the model text.
 - [ ] Test missing history, provider failure, permission request, empty result and timeout: each yields a useful error, never a replacement result; a timed-out helper is actively stopped or otherwise conclusively closed using the method proven in Task 1, then archived. Test cleanup after success and failure and failed cleanup reporting.
-- [ ] Register host settings and the Zod-validated RPC. Implement history pagination and helper ownership using only the verified interfaces. Reject unknown or unsupported execution states; never automatically grant a permission or log request contents.
+- [ ] Register host settings and the Zod-validated RPCs. Implement history pagination and helper ownership using only the verified interfaces. Reject unknown or unsupported execution states; never automatically grant a permission or log request contents.
 - [ ] Run `npm test` and `npm run typecheck`. Confirm the tests use fakes and do not contact providers. Commit: `git add shared server index.server.ts tests && git commit -m 'Run prompt enhancement through Paseo'`.
 
 ### Task 4: Composer and settings experience
 
 **Files:** Create `client/settings.tsx`, `client/enhancer.tsx`, `tests/composer.test.ts`. Modify `index.client.tsx`.
 
-**Interfaces:** Client calls the Task 3 RPC and reads/saves Task 2 host settings. Composer state must expose current text and supported replacement according to Task 1; the saved undo value is the current text read immediately before successful replacement, not the text captured at request start.
+**Interfaces:** Client calls the Task 3 RPCs and reads/saves Task 2 host settings. Composer state must expose current text and supported replacement according to Task 1; the saved undo value is the current text read immediately before successful replacement, not the text captured at request start.
 
 - [ ] Test the interaction state at the client boundary: Quick uses defaults; Advanced copies the selected instruction into an editable field and supports a one-run limit; changing that field does not modify the saved scenario. Test that a running request prevents a second request in the same composer.
 - [ ] Test that success replaces the latest current draft, Undo restores that immediately preceding draft, and empty or failed results preserve it. Test the case where the user edits the draft while the request is running. Implement a clearly scoped Undo lifetime using only APIs confirmed in Task 1.

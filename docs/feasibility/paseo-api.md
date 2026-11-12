@@ -1,6 +1,6 @@
 # Paseo integration feasibility
 
-Status: **gate not passed**. Read-only investigation, 2026-11-11. No daemon was changed and no live model or end-to-end test was run.
+Status: **historical investigation**, 2026-11-11. The former universal tool-restriction gate was removed by the owner on 2026-11-12. The implementation now targets Paseo 0.16's official composer API and a background agent with normal provider permissions. Local unit checks do not establish live behavior.
 
 ## Evidence and version scope
 
@@ -19,6 +19,6 @@ The SDK exposes timeline pagination, but this investigation did not establish co
 
 ## Gate decision and next action
 
-The approved plan requires an enforced restriction of helper tools and controlled lifecycle before product implementation. Neither a universal text-only restriction nor recovery across all required failure paths has been established. In addition, the pinned SDK lacks the documented composer interfaces. The gate remains **not passed**; this is not a claim that the capability is impossible in another version or provider.
+The original plan required an enforced restriction of helper tools before product implementation. That requirement has since been withdrawn. Paseo 0.16.0-beta.1 and beta.2 SDK packages contain `useComposer`, `setPrompt`, `addComposerItem`, and composer references; 0.15.4 does not. The repository now pins beta.2 SDK packages. This is static package evidence, not a live compatibility test. Lifecycle behavior on disconnect, restart and failed cleanup still needs verification.
 
-The owner requested end-to-end tests on a separate isolated daemon. A useful future test setup must have its own daemon home, configuration, ports, temporary workspace and synthetic data, and must record exact host/app/plugin versions. It must not change the existing daemon. A live provider test alone cannot prove that all providers and inherited configurations deny tools. Resolve the API/version and execution design first, then perform authorized tests on the isolated daemon.
+The owner requested end-to-end tests on a separate isolated daemon. A test setup must have its own daemon home, configuration, ports, temporary workspace and synthetic data, and must record exact host/app/plugin versions. It must not change the existing daemon. A fresh 0.16.0-beta.2 isolated daemon unexpectedly started downloading a local speech model on startup; it was stopped, all captured processes exited, and its models directory reported 0 bytes. Disable unused speech features before restarting it. Plugin enablement for this isolated daemon is awaiting explicit permission.

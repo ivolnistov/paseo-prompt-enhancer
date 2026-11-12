@@ -2,7 +2,7 @@
 
 ## Goal and scope
 
-Prompt Enhancer improves the draft in a Paseo composer on explicit request. It uses a provider and model already configured on the selected Paseo host. It must work from desktop and mobile clients and with a remote host, subject to the supported Paseo APIs and their version requirements.
+Prompt Enhancer improves the draft in a Paseo composer on explicit request. It uses a provider and model already configured on the selected Paseo host. It must work from desktop and mobile clients and with a remote host, using the official Paseo 0.16 composer API. Changes to Paseo itself are out of scope.
 
 The plugin never submits the resulting prompt to the conversation. It does not automatically improve prompts or maintain its own provider credentials.
 
@@ -31,9 +31,9 @@ The selected provider receives the draft, instruction, and any selected history.
 
 The client owns composer integration, settings UI, the Advanced form, progress, and undo. Host-side behavior uses Paseo's supported SDK and plugin interfaces. Reuse the selected host connection for remote and mobile use.
 
-The preferred candidate is a temporary background Paseo agent using the selected configured provider and model. It receives the instruction, draft, and selected history; the plugin accepts only a successful, nonempty result. Track the helper as plugin-owned, close and archive it on completion or failure, and handle timeouts, disconnects, permission requests, and interrupted cleanup explicitly. Archiving is not deletion: background agent history may remain on the host and provider.
+Use a temporary background Paseo agent with the selected configured provider and model. It receives the instruction, draft, and selected history; the plugin accepts only a successful, nonempty result. Track the helper as plugin-owned, close and archive it on completion or failure, and handle timeouts, disconnects, permission requests, and interrupted cleanup explicitly. Archiving is not deletion: background agent history may remain on the host and provider.
 
-Before implementing the product flow, verify against the targeted Paseo version and providers that the helper can be restricted to the required text task, including its built-in tools and inherited configuration, and that its lifecycle can be controlled on all relevant failure paths. An instruction alone is not proof that tools are disabled. Verify available provider/model discovery, context retrieval, composer replacement and settings APIs, and compatibility of both host and app. If the required restriction or lifecycle control cannot be established, stop and discuss a Paseo extension with the owner; do not silently substitute direct provider credentials or weaken the requirement.
+The helper uses the selected provider’s normal configuration and permissions; background controls visibility, not privileges. Instruct it to rewrite the supplied text rather than execute it. Do not automatically grant permissions. A universal disable-all-tools guarantee is not required and must not be claimed. Verify provider/model discovery, context retrieval, composer replacement, settings APIs, lifecycle and compatibility of both host and app. Never modify Paseo or silently substitute separate provider credentials.
 
 ## Project documentation
 
@@ -48,7 +48,7 @@ Before implementing the product flow, verify against the targeted Paseo version 
 2. Host settings are shared across connected clients; custom scenarios persist. Defaults include zero history characters.
 3. History selection respects the chosen types and character limit, including a truncated oldest entry. Failures do not silently change the requested context.
 4. Successful output replaces the current draft without sending it. Undo restores the text immediately before replacement. Errors and empty output preserve the current draft.
-5. Provider calls use Paseo's configured provider and model, with tool restrictions and helper lifecycle verified before release. No unattended helper is left running after normal completion, failure, or a handled timeout; disconnect and restart recovery are verified and any unsupported cases are documented.
+5. Provider calls use Paseo's configured provider and model, with provider permissions disclosed and helper lifecycle verified before release. No unattended helper is left running after normal completion, failure, or a handled timeout; disconnect and restart recovery are verified and any unsupported cases are documented.
 6. Automated checks exercise selection, settings, request and result handling, and failure paths. Functional checks cover supported desktop, compact/mobile, and remote-host clients, including the actual control placement and error states.
 7. The manifest declares the verified minimum Paseo version for all APIs used. The repository documentation reflects the shipped and tested behavior.
 
