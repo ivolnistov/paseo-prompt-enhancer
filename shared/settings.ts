@@ -22,11 +22,11 @@ export const settingsSchema = z.object({
   includeTools: z.boolean().default(false),
   showAdvanced: z.boolean().default(true),
 }).superRefine((value, context) => {
-  const ids = [...builtInScenarios.map((scenario) => scenario.id as string), ...value.customScenarios.map((scenario) => scenario.id)];
-  if (new Set(ids).size !== ids.length) {
+  const customIds = value.customScenarios.map((scenario) => scenario.id);
+  if (new Set(customIds).size !== customIds.length) {
     context.addIssue({ code: "custom", path: ["customScenarios"], message: "Scenario IDs must be unique." });
   }
-  if (!ids.includes(value.defaultScenario)) {
+  if (!builtInScenarios.some((scenario) => scenario.id === value.defaultScenario) && !customIds.includes(value.defaultScenario)) {
     context.addIssue({ code: "custom", path: ["defaultScenario"], message: "Select an existing scenario." });
   }
 });
