@@ -5,6 +5,7 @@ import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
 import { builtInScenarios, preferences, settingsSchema, visibilityChanges } from "../shared/settings";
 import { applyImprovement } from "./draft";
+import { createVisibilityState } from "./visibility";
 
 interface AgentActions { quick: PluginButtonRegistration; advanced: PluginButtonRegistration; undo: PluginButtonRegistration }
 
@@ -15,18 +16,21 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
   const lifetime = new AbortController();
   let showAdvanced = false;
 
-  function setAdvancedVisibility(visible: boolean): void {
+  const visibility = createVisibilityState((visible) => {
     showAdvanced = visible;
     for (const registration of registrations.values()) registration.advanced.update({ visible });
-  }
+  });
+  const setAdvancedVisibility = visibility.update;
 
   function SettingsBridge() {
     useSubscription(visibilityChanges, {}, ({ showAdvanced: visible }) => setAdvancedVisibility(visible));
     return null;
   }
   const removeSettingsBridge = client.addComposerItem({ id: "settings-bridge", Component: SettingsBridge });
-  void client.rpc(settingsRpc(preferences.id).read, {}).then((result) => {
-    if (!lifetime.signal.aborted && result.status === "ready") setAdvancedVisibility(settingsSchema.parse(result.values).showAdvanced);
+  void visibility.loadInitial(async () => {
+    const result = await client.rpc(settingsRpc(preferences.id).read, {});
+    if (result.status !== "ready") throw new Error(result.error);
+    return settingsSchema.parse(result.values).showAdvanced;
   }).catch((error: unknown) => { if (!lifetime.signal.aborted) console.error("Prompt Enhancer settings unavailable", error); });
 
   async function run(workspaceId: string, agentId: string, instruction: string, historyLimit: number, includeTools: boolean): Promise<void> {
@@ -118,6 +122,6 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
   }).catch((error: unknown) => { if (!lifetime.signal.aborted) console.error("Prompt Enhancer agent observation failed", error); });
   return {
     setAdvancedVisibility,
-    cleanup() { lifetime.abort(); removeSettingsBridge(); for (const id of registrations.keys()) remove(id); },
+    cleanup() { lifetime.abort(); visibility.close(); removeSettingsBridge(); for (const id of registrations.keys()) remove(id); },
   };
 }
