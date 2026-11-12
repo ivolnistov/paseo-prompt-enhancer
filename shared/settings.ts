@@ -21,6 +21,8 @@ export const settingsSchema = z.object({
   historyLimit: z.number().int().nonnegative().safe().default(0),
   includeTools: z.boolean().default(false),
   showAdvanced: z.boolean().default(true),
+  quickLabel: z.string().trim().min(1).default("Prompt Import"),
+  advancedLabel: z.string().trim().min(1).default("Prompt Advance"),
 }).superRefine((value, context) => {
   const customIds = value.customScenarios.map((scenario) => scenario.id);
   if (new Set(customIds).size !== customIds.length) {
@@ -41,7 +43,8 @@ export const preferences = defineSettings({
 export const visibilityChanges = defineSubscription({
   name: "preferences.visibility",
   input: z.object({}),
-  event: z.object({ showAdvanced: z.boolean() }),
+  event: z.object({ showAdvanced: z.boolean(), quickLabel: z.string(), advancedLabel: z.string() }),
 });
 
 export type Preferences = z.output<typeof settingsSchema>;
+export type Presentation = Pick<Preferences, "showAdvanced" | "quickLabel" | "advancedLabel">;

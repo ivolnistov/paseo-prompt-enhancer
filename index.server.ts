@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { startEnhancement, enhancementStatus } from "./shared/enhance";
-import { preferences, visibilityChanges } from "./shared/settings";
+import { preferences, visibilityChanges, type Presentation } from "./shared/settings";
 import { runEnhancement } from "./server/enhance";
 
 export default function contribute(server: PluginServerContext): () => void {
@@ -13,17 +13,17 @@ export default function contribute(server: PluginServerContext): () => void {
   let active = true;
   server.handle(visibilityChanges, (_input, { push, signal }) => {
     let receivedChange = false;
-    const send = (visible: boolean) => {
-      void push({ showAdvanced: visible }).catch((error: unknown) => {
+    const send = ({ showAdvanced, quickLabel, advancedLabel }: Presentation) => {
+      void push({ showAdvanced, quickLabel, advancedLabel }).catch((error: unknown) => {
         if (!signal.aborted) console.error("Prompt Enhancer visibility update failed", error);
       });
     };
     const unsubscribe = settings.subscribe((state) => {
-      if (state.status === "ready") { receivedChange = true; send(state.values.showAdvanced); }
+      if (state.status === "ready") { receivedChange = true; send(state.values); }
     });
     if (signal.aborted) { unsubscribe(); return; }
     signal.addEventListener("abort", unsubscribe, { once: true });
-    void settings.read().then((state) => { if (!signal.aborted && !receivedChange && state.status === "ready") send(state.values.showAdvanced); }).catch((error: unknown) => {
+    void settings.read().then((state) => { if (!signal.aborted && !receivedChange && state.status === "ready") send(state.values); }).catch((error: unknown) => {
       if (!signal.aborted) console.error("Prompt Enhancer settings read failed", error);
     });
   });

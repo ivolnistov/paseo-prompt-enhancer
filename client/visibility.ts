@@ -1,15 +1,15 @@
-export function createVisibilityState(onChange: (visible: boolean) => void) {
+export function createVisibilityState<T>(onChange: (value: T) => void) {
   let version = 0;
   let active = true;
-  function update(visible: boolean): void {
+  function update(value: T): void {
     if (!active) return;
     version += 1;
-    onChange(visible);
+    onChange(value);
   }
-  async function loadInitial(read: () => Promise<boolean>): Promise<void> {
+  async function loadInitial(read: () => Promise<T>): Promise<void> {
     const startedAt = version;
-    const visible = await read();
-    if (active && version === startedAt) update(visible);
+    const value = await read();
+    if (active && version === startedAt) update(value);
   }
   return { update, loadInitial, close() { active = false; } };
 }

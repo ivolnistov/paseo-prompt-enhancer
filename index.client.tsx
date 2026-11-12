@@ -4,7 +4,7 @@ import { Settings } from "./client/settings";
 
 export default function contribute(client: PluginClientContext) {
   const actions = registerActions(client);
-  const SettingsScreen = (props: PluginSurfaceProps) => <Settings {...props} onSaved={actions.setAdvancedVisibility} />;
+  const SettingsScreen = (props: PluginSurfaceProps) => <Settings {...props} onSaved={actions.setPresentation} />;
   const removeSettings = client.addSettingsScreen({ id: "settings", title: "Prompt Enhancer", icon: "Sparkles", Component: SettingsScreen });
   return () => { actions.cleanup(); removeSettings(); };
 }

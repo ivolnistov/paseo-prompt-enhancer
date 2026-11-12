@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { usePaseo, useSettings, type PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { SettingsAction, SettingsCard, SettingsInput, SettingsSection, SettingsSelect, SettingsSwitch } from "@getpaseo/plugin/client/ui";
-import { builtInScenarios, preferences, type Preferences } from "../shared/settings";
+import { builtInScenarios, preferences, settingsSchema, type Preferences, type Presentation } from "../shared/settings";
 
-export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(showAdvanced: boolean): void }) {
+export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(value: Presentation): void }) {
   const settings = useSettings(preferences);
   const paseo = usePaseo();
   const [draft, setDraft] = useState<Preferences | null>(null);
@@ -26,7 +26,7 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(show
   const scenarios = [...builtInScenarios, ...draft.customScenarios];
   const models = catalog.find((entry) => entry.provider === draft.provider)?.models ?? [];
   const save = async () => {
-    if (await settings.save(draft, revision)) { onSaved(draft.showAdvanced); setDraft(null); setError(""); }
+    if (await settings.save(draft, revision)) { onSaved(settingsSchema.parse(draft)); setDraft(null); setError(""); }
     else setError("Could not save settings. Reload and review your changes if another client changed them.");
   };
   return <View style={{ gap: 16 }}>
@@ -37,6 +37,10 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(show
       <SettingsInput label="History limit in characters" initialValue={String(draft.historyLimit)} onChangeText={(value) => update({ historyLimit: value.trim() === "" ? 0 : Number(value) })} />
       <SettingsSwitch label="Include tool calls and results" value={draft.includeTools} onValueChange={(includeTools) => update({ includeTools })} />
       <SettingsSwitch label="Show advanced action" value={draft.showAdvanced} onValueChange={(showAdvanced) => update({ showAdvanced })} />
+    </SettingsCard></SettingsSection>
+    <SettingsSection title="Composer buttons"><SettingsCard>
+      <SettingsInput label="Quick button name" initialValue={draft.quickLabel} onChangeText={(quickLabel) => update({ quickLabel })} />
+      <SettingsInput label="Advanced button name" initialValue={draft.advancedLabel} onChangeText={(advancedLabel) => update({ advancedLabel })} />
     </SettingsCard></SettingsSection>
     <SettingsSection title="Custom scenarios"><SettingsCard>
       {draft.customScenarios.map((scenario, index) => <View key={scenario.id} style={{ gap: 8, padding: 12 }}>

@@ -4,34 +4,37 @@ import { useSettings, useSubscription, type PluginButtonContentProps, type Plugi
 import { TextInput } from "@getpaseo/plugin/client/ui";
 import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
-import { builtInScenarios, preferences, settingsSchema, visibilityChanges } from "../shared/settings";
+import { builtInScenarios, preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
 import { applyImprovement } from "./draft";
 import { createVisibilityState } from "./visibility";
 
 interface AgentActions { quick: PluginButtonRegistration; advanced: PluginButtonRegistration; undo: PluginButtonRegistration }
 
-export function registerActions(client: PluginClientContext): { cleanup(): void; setAdvancedVisibility(visible: boolean): void } {
+export function registerActions(client: PluginClientContext): { cleanup(): void; setPresentation(value: Presentation): void } {
   const registrations = new Map<string, AgentActions>();
   const busy = new Set<string>();
   const previous = new Map<string, string>();
   const lifetime = new AbortController();
-  let showAdvanced = false;
+  let presentation: Presentation = { showAdvanced: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" };
 
-  const visibility = createVisibilityState((visible) => {
-    showAdvanced = visible;
-    for (const registration of registrations.values()) registration.advanced.update({ visible });
+  const visibility = createVisibilityState<Presentation>((value) => {
+    presentation = value;
+    for (const registration of registrations.values()) {
+      registration.quick.update({ title: value.quickLabel, label: value.quickLabel });
+      registration.advanced.update({ title: value.advancedLabel, label: value.advancedLabel, visible: value.showAdvanced });
+    }
   });
-  const setAdvancedVisibility = visibility.update;
+  const setPresentation = visibility.update;
 
   function SettingsBridge() {
-    useSubscription(visibilityChanges, {}, ({ showAdvanced: visible }) => setAdvancedVisibility(visible));
+    useSubscription(visibilityChanges, {}, setPresentation);
     return null;
   }
   const removeSettingsBridge = client.addComposerItem({ id: "settings-bridge", Component: SettingsBridge });
   void visibility.loadInitial(async () => {
     const result = await client.rpc(settingsRpc(preferences.id).read, {});
     if (result.status !== "ready") throw new Error(result.error);
-    return settingsSchema.parse(result.values).showAdvanced;
+    return settingsSchema.parse(result.values);
   }).catch((error: unknown) => { if (!lifetime.signal.aborted) console.error("Prompt Enhancer settings unavailable", error); });
 
   async function run(workspaceId: string, agentId: string, instruction: string, historyLimit: number, includeTools: boolean): Promise<void> {
@@ -110,8 +113,8 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
   function register(agent: { id: string; workspaceId?: string | null }): void {
     if (!agent.workspaceId || lifetime.signal.aborted || registrations.has(agent.id)) return;
     const { id: agentId, workspaceId } = agent;
-    const quickButton = client.addComposerPill({ id: "quick", agentId, workspaceId, button: { title: "Improve prompt", label: "Improve", icon: "Sparkles", behavior: { kind: "action", onPress: () => quick(workspaceId, agentId) } } });
-    const advanced = client.addComposerPill({ id: "advanced", agentId, workspaceId, button: { title: "Advanced prompt improvement", label: "Advanced", icon: "SlidersHorizontal", visible: showAdvanced, behavior: { kind: "popover", Content: Advanced } } });
+    const quickButton = client.addComposerPill({ id: "quick", agentId, workspaceId, button: { title: presentation.quickLabel, label: presentation.quickLabel, icon: "Sparkles", behavior: { kind: "action", onPress: () => quick(workspaceId, agentId) } } });
+    const advanced = client.addComposerPill({ id: "advanced", agentId, workspaceId, button: { title: presentation.advancedLabel, label: presentation.advancedLabel, icon: "SlidersHorizontal", visible: presentation.showAdvanced, behavior: { kind: "popover", Content: Advanced } } });
     const undo = client.addComposerPill({ id: "undo", agentId, workspaceId, button: { title: "Undo prompt improvement", label: "Undo", icon: "Undo2", visible: false, behavior: { kind: "action", onPress() { const current = client.composers({ agentId })[0]; const text = previous.get(agentId); if (current && text !== undefined) { current.setPrompt(text); previous.delete(agentId); registrations.get(agentId)?.undo.update({ visible: false }); } } } } });
     registrations.set(agentId, { quick: quickButton, advanced, undo });
   }
@@ -122,7 +125,7 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     });
   }).catch((error: unknown) => { if (!lifetime.signal.aborted) console.error("Prompt Enhancer agent observation failed", error); });
   return {
-    setAdvancedVisibility,
+    setPresentation,
     cleanup() { lifetime.abort(); visibility.close(); removeSettingsBridge(); for (const id of registrations.keys()) remove(id); },
   };
 }

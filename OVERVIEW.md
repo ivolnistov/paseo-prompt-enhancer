@@ -2,7 +2,7 @@
 
 Prompt Enhancer rewrites a draft in an existing Paseo agent's composer. Quick improvement uses your saved defaults. Advanced lets you choose a scenario, edit its instruction and set a history limit for one request. You can undo the last replacement; the plugin does not send the rewritten draft to the conversation.
 
-Choose a provider and model configured on the selected host in the plugin settings. The built-in scenarios make text concise, improve readability or clarify it. You can add custom scenarios, choose a default and hide the Advanced action.
+Choose a provider and model configured on the selected host in the plugin settings. The built-in scenarios make text concise, improve readability or clarify it. You can add custom scenarios, choose a default, rename the two composer buttons and hide the Advanced action. Their default names are “Prompt Import” and “Prompt Advance”.
 
 The history limit is measured in characters and defaults to zero. You can include recent user and assistant messages and optionally tool calls and results. The selected provider receives the draft, instruction and selected history. The plugin creates a background agent using that provider's normal permissions; it does not automatically approve permission requests. Agent and provider history may retain this content after the helper is archived.
 

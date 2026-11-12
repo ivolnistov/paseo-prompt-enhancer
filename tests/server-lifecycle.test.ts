@@ -45,11 +45,11 @@ test("visibility subscribers receive the saved value and changes, then unsubscri
   const events: unknown[] = [];
   handler({}, { signal: controller.signal, push: async (event: unknown) => { events.push(event); } });
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.deepEqual(events, [{ showAdvanced: false }]);
+  assert.deepEqual(events, [{ showAdvanced: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" }]);
   assert.ok(listener);
-  listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true }) });
+  listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true, quickLabel: "Rewrite", advancedLabel: "Options" }) });
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.deepEqual(events, [{ showAdvanced: false }, { showAdvanced: true }]);
+  assert.deepEqual(events, [{ showAdvanced: false, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" }, { showAdvanced: true, quickLabel: "Rewrite", advancedLabel: "Options" }]);
   controller.abort();
   assert.equal(released, true);
   cleanup();
@@ -75,7 +75,7 @@ test("an older initial settings read does not overwrite a newer notification", a
   listener({ status: "ready", values: settingsSchema.parse({ showAdvanced: true }) });
   finishRead({ status: "ready", values: settingsSchema.parse({ showAdvanced: false }) });
   await new Promise<void>((resolve) => setImmediate(resolve));
-  assert.deepEqual(events, [{ showAdvanced: true }]);
+  assert.deepEqual(events, [{ showAdvanced: true, quickLabel: "Prompt Import", advancedLabel: "Prompt Advance" }]);
   controller.abort();
   cleanup();
 });
