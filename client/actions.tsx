@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useSettings, useSubscription, type PluginButtonContentProps, type PluginButtonRegistration, type PluginClientContext } from "@getpaseo/plugin/client";
+import { TextInput } from "@getpaseo/plugin/client/ui";
 import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
 import { builtInScenarios, preferences, settingsSchema, visibilityChanges } from "../shared/settings";
