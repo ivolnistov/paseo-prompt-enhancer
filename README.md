@@ -8,7 +8,7 @@ The provider receives the draft, instruction and selected history. Enhancement c
 
 ## Compatibility and status
 
-The manifest targets Paseo `>=0.16.0`. Functional checks used a separate 0.16.0-beta.2 daemon with desktop web and Android clients, including Quick, Undo, Advanced and history. A stable 0.16 release and a separate remote host have not been verified. The controls did not appear in an unsent new-agent draft during testing. Recovery after a daemon interruption or failed cleanup has not been verified; inspect background agents if a request is interrupted.
+The manifest declares a minimum of Paseo `>=0.16.0`; compatibility with that stable version has not been verified. Functional checks used a separate 0.16.0-beta.2 daemon with desktop web and Android clients, including Quick, Undo, Advanced and history. A separate remote host has not been verified. The controls did not appear in an unsent new-agent draft during testing. Recovery after a daemon interruption or failed cleanup has not been verified; inspect background agents if a request is interrupted.
 
 The project is being prepared for release; it has not been submitted to the Paseo registry.
 
