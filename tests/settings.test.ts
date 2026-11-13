@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { dshScenario, openaiScenario, preferences, scenarioTemplates, settingsSchema } from "../shared/settings";
+import { defaultGoalInstruction, dshScenario, openaiScenario, preferences, scenarioTemplates, settingsSchema } from "../shared/settings";
 
 test("settings default to no history and a built-in scenario", () => {
   const settings = settingsSchema.parse({});
@@ -12,6 +12,7 @@ test("settings default to no history and a built-in scenario", () => {
   assert.equal(settings.advancedLabel, "Prompt Advance");
   assert.equal(settings.goalLabel, "Goal Improve");
   assert.equal(settings.goalHistoryLimit, 0);
+  assert.equal(settings.goalInstruction, defaultGoalInstruction);
   assert.equal(settings.goalIncludeTools, false);
   assert.equal(settings.showQuick && settings.showAdvanced && settings.showGoal, true);
 });
@@ -23,6 +24,8 @@ test("validates limits, scenario identity and custom instructions", () => {
   assert.equal(settingsSchema.safeParse({ advancedLabel: "" }).success, false);
   assert.equal(settingsSchema.safeParse({ goalLabel: "" }).success, false);
   assert.equal(settingsSchema.safeParse({ goalHistoryLimit: -1 }).success, false);
+  assert.equal(settingsSchema.safeParse({ goalInstruction: "  " }).success, false);
+  assert.equal(settingsSchema.parse({ goalInstruction: " Custom goal instruction " }).goalInstruction, "Custom goal instruction");
   const hidden = settingsSchema.parse({ showQuick: false, showAdvanced: true, showGoal: false });
   assert.deepEqual([hidden.showQuick, hidden.showAdvanced, hidden.showGoal], [false, true, false]);
   assert.equal(settingsSchema.parse({ quickLabel: "  Rewrite  " }).quickLabel, "Rewrite");

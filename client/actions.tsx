@@ -4,7 +4,7 @@ import { useSettings, useSubscription, type PluginButtonContentProps, type Plugi
 import { TextInput } from "@getpaseo/plugin/client/ui";
 import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
-import { goalInstruction, preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
+import { preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
 import { applyImprovement, goalCommand } from "./draft";
 import { createVisibilityState } from "./visibility";
 import { applyPresentation } from "./presentation";
@@ -77,7 +77,7 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     const stored = await client.rpc(settingsRpc(preferences.id).read, {});
     if (stored.status !== "ready") throw new Error(stored.error);
     const settings = settingsSchema.parse(stored.values);
-    await run(workspaceId, agentId, goalInstruction, settings.goalHistoryLimit, settings.goalIncludeTools, goalCommand);
+    await run(workspaceId, agentId, settings.goalInstruction, settings.goalHistoryLimit, settings.goalIncludeTools, goalCommand);
   }
 
   function Advanced(props: PluginButtonContentProps) {

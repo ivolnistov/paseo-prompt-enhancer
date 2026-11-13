@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { usePaseo, useSettings, type PluginSurfaceProps } from "@getpaseo/plugin/client";
-import { SettingsAction, SettingsCard, SettingsInput, SettingsSection, SettingsSelect, SettingsSwitch } from "@getpaseo/plugin/client/ui";
+import { SettingsAction, SettingsCard, SettingsInput, SettingsSection, SettingsSelect, SettingsSwitch, TextInput as HostTextInput } from "@getpaseo/plugin/client/ui";
 import { preferences, settingsSchema, type Preferences, type Presentation } from "../shared/settings";
 
 export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(value: Presentation): void }) {
@@ -46,7 +46,12 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
       <SettingsInput label="Goal button name" initialValue={draft.goalLabel} onChangeText={(goalLabel) => update({ goalLabel })} />
       <SettingsSwitch label="Show goal button" value={draft.showGoal} onValueChange={(showGoal) => update({ showGoal })} />
     </SettingsCard></SettingsSection>
-    <SettingsSection title="Goal context"><SettingsCard>
+    <SettingsSection title="Goal Improve"><SettingsCard>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 8 }}>
+        <Text style={{ color: theme.colors.foreground }}>Goal instruction</Text>
+        <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13 }}>Used to prepare the /goal command. Edit it to change how goals are written.</Text>
+        <HostTextInput accessibilityLabel="Goal instruction" value={draft.goalInstruction} multiline onChangeText={(goalInstruction) => update({ goalInstruction })} style={{ color: theme.colors.foreground, backgroundColor: theme.colors.surface0, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, minHeight: 150, textAlignVertical: "top" }} />
+      </View>
       <SettingsInput label="Goal history limit in characters" initialValue={String(draft.goalHistoryLimit)} onChangeText={(value) => update({ goalHistoryLimit: value.trim() === "" ? 0 : Number(value) })} />
       <SettingsSwitch label="Include tool calls and results in goal" value={draft.goalIncludeTools} onValueChange={(goalIncludeTools) => update({ goalIncludeTools })} />
     </SettingsCard></SettingsSection>
