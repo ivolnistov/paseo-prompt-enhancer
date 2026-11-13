@@ -11,6 +11,8 @@
     "index.server.ts",
     "index.server.tsx",
     "assets/",
+    "DSH_LICENSE.txt",
+    "THIRD_PARTY_NOTICES.md",
     "client/",
     "server/",
     "shared/"
