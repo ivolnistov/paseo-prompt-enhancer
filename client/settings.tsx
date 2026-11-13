@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { usePaseo, useSettings, type PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { SettingsAction, SettingsCard, SettingsInput, SettingsSection, SettingsSelect, SettingsSwitch } from "@getpaseo/plugin/client/ui";
-import { builtInScenarios, preferences, settingsSchema, type Preferences, type Presentation } from "../shared/settings";
+import { preferences, settingsSchema, type Preferences, type Presentation } from "../shared/settings";
 
 export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(value: Presentation): void }) {
   const settings = useSettings(preferences);
@@ -23,7 +23,7 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
   }, [settings, draft]);
   if (settings.status !== "ready" || !draft) return <Text style={{ color: theme.colors.foreground }}>{settings.status === "error" || settings.status === "invalid" ? settings.error : "Loading settings…"}</Text>;
   const update = (patch: Partial<Preferences>) => setDraft({ ...draft, ...patch });
-  const scenarios = [...builtInScenarios, ...draft.customScenarios];
+  const scenarios = draft.scenarios;
   const models = catalog.find((entry) => entry.provider === draft.provider)?.models ?? [];
   const save = async () => {
     if (await settings.save(draft, revision)) { onSaved(settingsSchema.parse(draft)); setDraft(null); setError(""); }
@@ -34,7 +34,7 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
       <SettingsSelect label="Provider" hint="Claude is recommended for fast rewriting. Other providers may take longer and use more tokens." value={draft.provider} options={catalog.map((entry) => ({ label: entry.label, value: entry.provider }))} onValueChange={(provider) => update({ provider, model: "" })} />
       {draft.provider === "claude" ? <SettingsSwitch label="Fast Claude CLI mode" hint="Uses the host’s Claude CLI and authentication. Custom Paseo provider commands and environment settings do not apply." value={draft.claudeFastMode} onValueChange={(claudeFastMode) => update({ claudeFastMode })} /> : null}
       <SettingsSelect label="Model" value={draft.model} options={models.map((model) => ({ label: model.label, value: model.id }))} onValueChange={(model) => update({ model })} />
-      <SettingsSelect label="Default scenario" value={draft.defaultScenario} options={scenarios.map((scenario) => ({ label: scenario.name, value: scenario.id }))} onValueChange={(defaultScenario) => update({ defaultScenario })} />
+      <SettingsSelect label="Default scenario" disabled={scenarios.length === 0} value={draft.defaultScenario} options={scenarios.map((scenario) => ({ label: scenario.name, value: scenario.id }))} onValueChange={(defaultScenario) => update({ defaultScenario })} />
       <SettingsInput label="History limit in characters" initialValue={String(draft.historyLimit)} onChangeText={(value) => update({ historyLimit: value.trim() === "" ? 0 : Number(value) })} />
       <SettingsSwitch label="Include tool calls and results" value={draft.includeTools} onValueChange={(includeTools) => update({ includeTools })} />
     </SettingsCard></SettingsSection>
@@ -50,24 +50,24 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
       <SettingsInput label="Goal history limit in characters" initialValue={String(draft.goalHistoryLimit)} onChangeText={(value) => update({ goalHistoryLimit: value.trim() === "" ? 0 : Number(value) })} />
       <SettingsSwitch label="Include tool calls and results in goal" value={draft.goalIncludeTools} onValueChange={(goalIncludeTools) => update({ goalIncludeTools })} />
     </SettingsCard></SettingsSection>
-    <SettingsSection title="Custom scenarios"><SettingsCard>
-      {draft.customScenarios.map((scenario, index) => <View key={scenario.id} style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12, borderBottomColor: theme.colors.border, borderBottomWidth: 1, minWidth: 0 }}>
+    <SettingsSection title="Scenarios"><SettingsCard>
+      {draft.scenarios.map((scenario, index) => <View key={scenario.id} style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12, borderBottomColor: theme.colors.border, borderBottomWidth: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <Text style={{ color: theme.colors.foreground, fontSize: 14, fontWeight: "600", flexShrink: 1 }}>Scenario {index + 1}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Remove scenario ${scenario.name}`} onPress={() => update({ customScenarios: draft.customScenarios.filter((_, i) => i !== index), defaultScenario: draft.defaultScenario === scenario.id ? "readability" : draft.defaultScenario })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Remove scenario ${scenario.name}`} onPress={() => update({ scenarios: draft.scenarios.filter((_, i) => i !== index), defaultScenario: draft.defaultScenario === scenario.id ? (draft.scenarios.find((item) => item.id !== scenario.id)?.id ?? "") : draft.defaultScenario })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8 }}>
             <Text style={{ color: theme.colors.foregroundMuted }}>Remove</Text>
           </Pressable>
         </View>
         <View style={{ gap: 6 }}>
           <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13 }}>Name</Text>
-          <TextInput accessibilityLabel="Scenario name" value={scenario.name} onChangeText={(name) => update({ customScenarios: draft.customScenarios.map((item, i) => i === index ? { ...item, name } : item) })} style={{ color: theme.colors.foreground, backgroundColor: theme.colors.surface0, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }} />
+          <TextInput accessibilityLabel="Scenario name" value={scenario.name} onChangeText={(name) => update({ scenarios: draft.scenarios.map((item, i) => i === index ? { ...item, name } : item) })} style={{ color: theme.colors.foreground, backgroundColor: theme.colors.surface0, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }} />
         </View>
         <View style={{ gap: 6 }}>
           <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13 }}>Instruction</Text>
-          <TextInput accessibilityLabel="Scenario instruction" value={scenario.instruction} multiline onChangeText={(instruction) => update({ customScenarios: draft.customScenarios.map((item, i) => i === index ? { ...item, instruction } : item) })} style={{ color: theme.colors.foreground, backgroundColor: theme.colors.surface0, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, minHeight: 80, textAlignVertical: "top" }} />
+          <TextInput accessibilityLabel="Scenario instruction" value={scenario.instruction} multiline onChangeText={(instruction) => update({ scenarios: draft.scenarios.map((item, i) => i === index ? { ...item, instruction } : item) })} style={{ color: theme.colors.foreground, backgroundColor: theme.colors.surface0, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, minHeight: 80, textAlignVertical: "top" }} />
         </View>
       </View>)}
-      <SettingsAction label="Add a custom scenario" actionLabel="Add" onPress={() => update({ customScenarios: [...draft.customScenarios, { id: `custom-${Date.now()}`, name: "New scenario", instruction: "Rewrite the prompt." }] })} />
+      <SettingsAction label="Add a scenario" actionLabel="Add" onPress={() => { let id = `custom-${Date.now()}`; while (draft.scenarios.some((scenario) => scenario.id === id)) id += "-1"; update({ scenarios: [...draft.scenarios, { id, name: "New scenario", instruction: "Rewrite the prompt." }], defaultScenario: draft.defaultScenario || id }); }} />
     </SettingsCard></SettingsSection>
     <Text style={{ color: theme.colors.foregroundMuted, paddingHorizontal: 4, lineHeight: 20 }}>The selected provider receives the draft and selected history. With Claude fast mode enabled, the host’s Claude CLI runs without tools or saved sessions. Otherwise a background agent uses the selected provider’s normal permissions and history retention.</Text>
     {error || settings.saveError ? <Text style={{ color: theme.colors.statusDanger }}>{error || settings.saveError}</Text> : null}

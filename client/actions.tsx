@@ -4,7 +4,7 @@ import { useSettings, useSubscription, type PluginButtonContentProps, type Plugi
 import { TextInput } from "@getpaseo/plugin/client/ui";
 import { settingsRpc } from "@getpaseo/plugin";
 import { enhancementStatus, startEnhancement } from "../shared/enhance";
-import { builtInScenarios, goalInstruction, preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
+import { goalInstruction, preferences, settingsSchema, visibilityChanges, type Presentation } from "../shared/settings";
 import { applyImprovement, goalCommand } from "./draft";
 import { createVisibilityState } from "./visibility";
 import { applyPresentation } from "./presentation";
@@ -68,7 +68,7 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     const stored = await client.rpc(settingsRpc(preferences.id).read, {});
     if (stored.status !== "ready") throw new Error(stored.error);
     const settings = settingsSchema.parse(stored.values);
-    const scenario = [...builtInScenarios, ...settings.customScenarios].find((item) => item.id === settings.defaultScenario);
+    const scenario = settings.scenarios.find((item) => item.id === settings.defaultScenario);
     if (!scenario) throw new Error("Choose a default scenario in settings.");
     await run(workspaceId, agentId, scenario.instruction, settings.historyLimit, settings.includeTools);
   }
@@ -84,16 +84,17 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     const settings = useSettings(preferences);
     const [selected, setSelected] = useState("");
     const [instruction, setInstruction] = useState("");
+    const [edited, setEdited] = useState(false);
     const [limit, setLimit] = useState("");
     const [running, setRunning] = useState(false);
     const [error, setError] = useState("");
     if (props.context !== "agent") return null;
     if (settings.status !== "ready") return <Text style={{ color: props.theme.colors.foreground }}>Settings are unavailable.</Text>;
     const { agentId, workspaceId } = props;
-    const scenarios = [...builtInScenarios, ...settings.values.customScenarios];
+    const scenarios = settings.values.scenarios;
     const current = selected || settings.values.defaultScenario;
     const active = scenarios.find((scenario) => scenario.id === current);
-    const text = selected ? instruction : active?.instruction ?? "";
+    const text = edited ? instruction : active?.instruction ?? "";
     const runAdvanced = async () => {
       const count = limit === "" ? settings.values.historyLimit : Number(limit);
       if (!Number.isSafeInteger(count) || count < 0 || !text.trim()) { setError("Enter an instruction and a nonnegative character limit."); return; }
@@ -104,8 +105,8 @@ export function registerActions(client: PluginClientContext): { cleanup(): void;
     };
     return <View style={{ padding: 16, gap: 10 }}>
       <Text style={{ color: props.theme.colors.foreground }}>Scenario</Text>
-      {scenarios.map((scenario) => <Pressable key={scenario.id} accessibilityRole="button" onPress={() => { setSelected(scenario.id); setInstruction(scenario.instruction); }}><Text style={{ color: props.theme.colors.foreground }}>{scenario.id === current ? "● " : "○ "}{scenario.name}</Text></Pressable>)}
-      <TextInput accessibilityLabel="Instruction" multiline value={text} onChangeText={(value) => { setSelected(current); setInstruction(value); }} style={{ color: props.theme.colors.foreground, borderColor: props.theme.colors.border, borderWidth: 1, padding: 8, minHeight: 80 }} />
+      {scenarios.map((scenario) => <Pressable key={scenario.id} accessibilityRole="button" onPress={() => { setSelected(scenario.id); setInstruction(scenario.instruction); setEdited(true); }}><Text style={{ color: props.theme.colors.foreground }}>{scenario.id === current ? "● " : "○ "}{scenario.name}</Text></Pressable>)}
+      <TextInput accessibilityLabel="Instruction" multiline value={text} onChangeText={(value) => { setSelected(current); setInstruction(value); setEdited(true); }} style={{ color: props.theme.colors.foreground, borderColor: props.theme.colors.border, borderWidth: 1, padding: 8, minHeight: 80 }} />
       <TextInput accessibilityLabel="History character limit" keyboardType="numeric" value={limit} placeholder={String(settings.values.historyLimit)} placeholderTextColor={props.theme.colors.foregroundMuted} onChangeText={setLimit} style={{ color: props.theme.colors.foreground, borderColor: props.theme.colors.border, borderWidth: 1, padding: 8 }} />
       {error ? <Text style={{ color: props.theme.colors.statusDanger }}>{error}</Text> : null}
       <Pressable disabled={running} accessibilityRole="button" onPress={() => { void runAdvanced(); }}><Text style={{ color: props.theme.colors.accent }}>{running ? "Improving…" : "Improve"}</Text></Pressable>
