@@ -62,3 +62,11 @@ test("reads older pages only until the requested history is available", async ()
   assert.ok(history.indexOf("older") < history.indexOf("latest"));
   assert.deepEqual(cursors, ["tail", "before"]);
 });
+
+test("Claude uses the configured Paseo provider when fast CLI mode is disabled", async () => {
+  const fixture = fake("idle", "Improved");
+  const claude = settingsSchema.parse({ provider: "claude", model: "claude-sonnet-5" });
+  assert.equal(claude.claudeFastMode, false);
+  assert.equal(await runEnhancement(fixture.api, input, claude), "Improved");
+  assert.deepEqual(fixture.events, ["create", "archive"]);
+});

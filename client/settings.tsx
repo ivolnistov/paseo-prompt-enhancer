@@ -31,7 +31,10 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
   };
   return <View style={{ gap: 16 }}>
     <SettingsSection title="Model"><SettingsCard>
+      <Text style={{ color: theme.colors.foregroundMuted }}>Claude is recommended for fast rewriting. Other providers remain available but may take longer and use more tokens.</Text>
       <SettingsSelect label="Provider" value={draft.provider} options={catalog.map((entry) => ({ label: entry.label, value: entry.provider }))} onValueChange={(provider) => update({ provider, model: "" })} />
+      {draft.provider === "claude" ? <SettingsSwitch label="Fast Claude CLI mode" value={draft.claudeFastMode} onValueChange={(claudeFastMode) => update({ claudeFastMode })} /> : null}
+      {draft.provider === "claude" ? <Text style={{ color: theme.colors.foregroundMuted }}>Fast mode uses the host’s Claude CLI and its authentication. Custom Paseo provider commands and environment settings are not applied.</Text> : null}
       <SettingsSelect label="Model" value={draft.model} options={models.map((model) => ({ label: model.label, value: model.id }))} onValueChange={(model) => update({ model })} />
       <SettingsSelect label="Default scenario" value={draft.defaultScenario} options={scenarios.map((scenario) => ({ label: scenario.name, value: scenario.id }))} onValueChange={(defaultScenario) => update({ defaultScenario })} />
       <SettingsInput label="History limit in characters" initialValue={String(draft.historyLimit)} onChangeText={(value) => update({ historyLimit: value.trim() === "" ? 0 : Number(value) })} />
@@ -57,7 +60,7 @@ export function Settings({ theme, onSaved }: PluginSurfaceProps & { onSaved(valu
       </View>)}
       <SettingsAction label="Add a custom scenario" actionLabel="Add" onPress={() => update({ customScenarios: [...draft.customScenarios, { id: `custom-${Date.now()}`, name: "New scenario", instruction: "Rewrite the prompt." }] })} />
     </SettingsCard></SettingsSection>
-    <Text style={{ color: theme.colors.foregroundMuted }}>The selected provider receives the draft and selected history. Its normal agent permissions and history retention apply.</Text>
+    <Text style={{ color: theme.colors.foregroundMuted }}>The selected provider receives the draft and selected history. With Claude fast mode enabled, the host’s Claude CLI runs without tools or saved sessions. Otherwise a background agent uses the selected provider’s normal permissions and history retention.</Text>
     {error || settings.saveError ? <Text style={{ color: theme.colors.statusDanger }}>{error || settings.saveError}</Text> : null}
     <SettingsAction label="Save settings" actionLabel="Save" disabled={settings.saving} onPress={() => { void save(); }} />
   </View>;

@@ -11,6 +11,7 @@ export default function contribute(server: PluginServerContext): () => void {
   const operations = new Map<string, Operation>();
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let active = true;
+  const shutdown = new AbortController();
   server.handle(visibilityChanges, (_input, { push, signal }) => {
     let receivedChange = false;
     const send = ({ showAdvanced, showQuick, showGoal, quickLabel, advancedLabel, goalLabel }: Presentation) => {
@@ -32,7 +33,7 @@ export default function contribute(server: PluginServerContext): () => void {
     if (current.status !== "ready") throw new Error(`Prompt Enhancer settings are invalid: ${current.error}`);
     const operationId = randomUUID();
     operations.set(operationId, { status: "running" });
-    void runEnhancement(paseo, input, current.values).then(
+    void runEnhancement(paseo, input, current.values, shutdown.signal).then(
       (text) => { if (active) operations.set(operationId, { status: "complete", text }); },
       (error: unknown) => { if (active) operations.set(operationId, { status: "error", message: error instanceof Error ? error.message : String(error) }); },
     ).finally(() => {
@@ -47,5 +48,5 @@ export default function contribute(server: PluginServerContext): () => void {
     if (!operation) throw new Error("The enhancement is no longer available.");
     return operation;
   });
-  return () => { active = false; for (const timer of timers) clearTimeout(timer); operations.clear(); };
+  return () => { active = false; shutdown.abort(); for (const timer of timers) clearTimeout(timer); operations.clear(); };
 }

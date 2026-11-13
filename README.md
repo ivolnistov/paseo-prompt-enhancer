@@ -4,7 +4,7 @@ Prompt Enhancer rewrites a draft in an existing Paseo agent's composer using a p
 
 In the plugin settings, select a provider and model, a default scenario and optionally custom scenarios. The three button names and their visibility are configurable; defaults are “Prompt Import”, “Prompt Advance” and “Goal Improve”. History limits default to zero; a positive limit includes recent conversation text and can optionally include tool calls and results. Goal Improve has its own history and tool inclusion settings.
 
-The provider receives the draft, instruction and selected history. Enhancement creates a background agent with the provider's normal permissions. The plugin does not automatically approve permission requests. Archiving the helper does not delete its history, and the provider may retain the request.
+The selected provider receives the draft, instruction and selected history. Claude is recommended for fast rewriting: enable Fast Claude CLI mode in settings. The selected host must have an authenticated Claude CLI; custom Paseo provider commands and environment settings are not applied. The plugin runs it with tools, customizations and session persistence disabled and low effort. Some models may still use internal reasoning. When fast mode is off, providers use background agents with their normal permissions and can take longer or use more tokens. The plugin does not automatically approve permission requests. Archiving a helper does not delete its history, and the provider may retain the request.
 
 ## Compatibility and status
 

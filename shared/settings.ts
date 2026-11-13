@@ -18,6 +18,7 @@ const scenarioSchema = z.object({
 export const settingsSchema = z.object({
   provider: z.string().default(""),
   model: z.string().default(""),
+  claudeFastMode: z.boolean().default(false),
   defaultScenario: z.string().default("readability"),
   customScenarios: z.array(scenarioSchema).default([]),
   historyLimit: z.number().int().nonnegative().safe().default(0),
