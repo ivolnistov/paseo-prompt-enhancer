@@ -3,7 +3,7 @@
   "name": "Prompt Enhancer",
   "description": "Session-aware prompt improvement for the Paseo composer.",
   "icon": "assets/icon.png",
-  "media": ["assets/desktop-composer.png", "assets/desktop-advanced.png"],
+  "media": ["assets/desktop-composer.png", "assets/desktop-advanced.png", "assets/desktop-settings.png"],
   "requirements": {
     "paseo": ">=0.16.0"
   }
