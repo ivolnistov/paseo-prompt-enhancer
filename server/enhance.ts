@@ -1,7 +1,10 @@
-import type { PaseoApi, PaseoAgentTimelineRefetchOptions } from "@getpaseo/client";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { selectHistory, type HistoryEntry } from "./history";
 import type { Preferences } from "../shared/settings";
 import { runClaude } from "./claude";
+
+type PaseoApi = PluginHandlerContext["paseo"];
+type TimelineRefetchOptions = NonNullable<Parameters<ReturnType<PaseoApi["agents"]["ref"]>["timeline"]["refetch"]>[0]>;
 
 export interface EnhanceInput {
   readonly workspaceId: string;
@@ -16,7 +19,7 @@ export async function readHistory(paseo: PaseoApi, input: EnhanceInput): Promise
   if (input.historyLimit === 0) return "";
   const agent = paseo.agents.ref(input.agentId);
   const pages: HistoryEntry[][] = [];
-  let cursor: PaseoAgentTimelineRefetchOptions["cursor"];
+  let cursor: TimelineRefetchOptions["cursor"];
   let size = 0;
   for (let pageNumber = 0; pageNumber < 100; pageNumber += 1) {
     const page = await agent.timeline.refetch({ direction: cursor ? "before" : "tail", cursor, limit: 100, projection: "canonical" });
